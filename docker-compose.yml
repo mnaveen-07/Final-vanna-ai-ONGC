@@ -1,0 +1,142 @@
+version: "3.9"
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: ./frontend/Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_URL=http://localhost:8000
+    depends_on:
+      - backend-api
+    networks:
+      - vanna-net
+
+  backend-api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://vanna_user:vanna_pass@postgres:5432/vanna_db
+      - REDIS_URL=redis://redis:6379
+      - SECRET_KEY=changeme_super_secret_key
+      - VANNA_SERVICE_URL=http://vanna-service:8001
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - ./backend:/app
+    networks:
+      - vanna-net
+
+  vanna-service:
+    build:
+      context: ./vanna-service
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8001"
+    environment:
+      # Change this to: mistral, llama3.1, or sqlcoder
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-sqlcoder}
+      # On Linux use: http://172.17.0.1:11434
+      # On Mac/Windows use: http://host.docker.internal:11434
+      - OLLAMA_HOST=${OLLAMA_HOST:-http://host.docker.internal:11434}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"   # needed on Linux
+    volumes:
+      - vanna-models:/app/models
+    networks:
+      - vanna-net
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: vanna_user
+      POSTGRES_PASSWORD: vanna_pass
+      POSTGRES_DB: vanna_db
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - vanna-net
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - vanna-net
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - frontend
+      - backend-api
+    networks:
+      - vanna-net
+
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: celery -A app.worker worker --loglevel=info
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://vanna_user:vanna_pass@postgres:5432/vanna_db
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - vanna-net
+
+  # ─── Test Databases ─────────────────────────────────────────────────────────
+  oracle-test:
+    image: gvenzl/oracle-free:slim
+    environment:
+      - ORACLE_PASSWORD=oracle_pass
+    ports:
+      - "1521:1521"
+    networks:
+      - vanna-net
+
+  mongodb-test:
+    image: mongo:6
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=mongo_user
+      - MONGO_INITDB_ROOT_PASSWORD=mongo_pass
+    ports:
+      - "27017:27017"
+    networks:
+      - vanna-net
+
+  mysql-test:
+    image: mysql:8
+    environment:
+      - MYSQL_ROOT_PASSWORD=mysql_pass
+      - MYSQL_DATABASE=test_db
+    ports:
+      - "3306:3306"
+    networks:
+      - vanna-net
+
+networks:
+  vanna-net:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  redis-data:
+  vanna-models:
