@@ -49,6 +49,8 @@ async def _extract_ddl(profile) -> list[str]:
         rows, _ = await execute_query_on_profile(profile, _MSSQL_DDL_QUERY)
     elif profile.db_type == DatabaseType.ORACLE:
         rows, _ = await execute_query_on_profile(profile, _ORACLE_DDL_QUERY)
+    elif profile.db_type == DatabaseType.MONGODB:
+        rows, _ = await execute_query_on_profile(profile, "__GET_SCHEMA__")
     else:
         return []
 

@@ -27,12 +27,12 @@ def validate_sql_safety(sql: str) -> None:
             raise ValueError(f"Blocked operation detected: {kw.upper()}")
 
 
-async def call_vanna_service(question: str, profile_id: int) -> dict:
+async def call_vanna_service(question: str, profile_id: int, db_type: str = "") -> dict:
     """Call the Vanna AI microservice to convert NL → SQL."""
-    async with httpx.AsyncClient(timeout=120.0) as client:
+    async with httpx.AsyncClient(timeout=300.0) as client:
         resp = await client.post(
             f"{settings.VANNA_SERVICE_URL}/generate-sql",
-            json={"question": question, "profile_id": profile_id},
+            json={"question": question, "profile_id": profile_id, "db_type": db_type},
         )
         if not resp.is_success:
             try:
@@ -60,7 +60,7 @@ async def execute_natural_language_query(
 
     try:
         # 1. Generate SQL via Vanna
-        vanna_result = await call_vanna_service(question, profile.id)
+        vanna_result = await call_vanna_service(question, profile.id, profile.db_type.value)
         generated_sql = vanna_result.get("sql", "")
         explanation = vanna_result.get("explanation", "")
 
@@ -119,7 +119,7 @@ async def preview_sql(
     question: str,
     api_token: APIToken,
 ) -> dict:
-    vanna_result = await call_vanna_service(question, api_token.profile.id)
+    vanna_result = await call_vanna_service(question, api_token.profile.id, api_token.profile.db_type.value)
     generated_sql = vanna_result.get("sql", "")
     validate_sql_safety(generated_sql)
     return {

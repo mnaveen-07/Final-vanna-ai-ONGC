@@ -35,9 +35,9 @@ def clean_sql_output(raw: str) -> str:
         flags=re.DOTALL | re.IGNORECASE
     )
 
-    # Extract SQL from ```sql blocks
+    # Extract SQL from ```sql or ```json blocks
     match = re.search(
-        r'```sql\s*(.*?)\s*```',
+        r'```(?:sql|json)\s*(.*?)\s*```',
         raw,
         flags=re.DOTALL | re.IGNORECASE
     )
@@ -47,8 +47,8 @@ def clean_sql_output(raw: str) -> str:
     else:
         sql = raw.strip()
     
-    # Gracefully catch when AI returns English instead of SQL (usually due to missing schema)
-    if sql.lower().startswith("the provided context is insufficient") or not any(sql.lower().startswith(kw) for kw in ["select", "with", "show", "desc", "explain"]):
+    # Disabled overly aggressive sanity check that was failing valid queries.
+    if sql.lower().startswith("the provided context is insufficient"):
         raise ValueError("The AI could not generate a SQL query. Have you clicked 'Ingest Schema' for this database profile yet?")
         
     return sql
@@ -84,6 +84,7 @@ def get_vn(profile_id: int) -> VannaPlatform:
 class GenerateSQLRequest(BaseModel):
     question: str
     profile_id: int
+    db_type: Optional[str] = None
 
 class GenerateSQLResponse(BaseModel):
     sql: str
@@ -108,7 +109,11 @@ class IngestSchemaRequest(BaseModel):
 async def generate_sql(body: GenerateSQLRequest):
     try:
         vn = get_vn(body.profile_id)
-        raw_sql = vn.generate_sql(question=body.question)
+        if body.db_type and body.db_type.lower() == "mongodb":
+            strict_prompt = f"{body.question}\n\nCRITICAL INSTRUCTION: The target database is MongoDB. You must output ONLY a valid JSON object with exactly two keys: 'collection' (the name of the MongoDB collection) and 'pipeline' (the JSON array for the aggregation pipeline). Do NOT wrap it in code blocks. Do NOT output SQL. Do NOT include conversational text. Start immediately with {{"
+        else:
+            strict_prompt = f"{body.question}\n\nCRITICAL INSTRUCTION: You must output ONLY the raw SQL query. Do NOT wrap it in code blocks. Do NOT include any conversational text, explanations, or comments. Start immediately with the query."
+        raw_sql = vn.generate_sql(question=strict_prompt)
 
         sql = clean_sql_output(raw_sql)
 

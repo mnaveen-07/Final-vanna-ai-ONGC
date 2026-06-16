@@ -64,6 +64,15 @@ async def delete_profile(db: AsyncSession, profile_id: int, user):
     profile = await get_profile(db, profile_id, user)
     if not profile:
         raise HTTPException(status_code=404, detail="Profile not found")
+        
+    from sqlalchemy import delete
+    from app.models.models import QueryLog, APIToken, SchemaMetadata
+    
+    # Manually delete child records to avoid foreign key constraint errors
+    await db.execute(delete(QueryLog).where(QueryLog.profile_id == profile_id))
+    await db.execute(delete(APIToken).where(APIToken.profile_id == profile_id))
+    await db.execute(delete(SchemaMetadata).where(SchemaMetadata.profile_id == profile_id))
+    
     await db.delete(profile)
     await db.commit()
 

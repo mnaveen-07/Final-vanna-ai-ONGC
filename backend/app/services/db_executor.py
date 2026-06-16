@@ -109,7 +109,7 @@ async def _run_oracle(profile, sql, password):
 
 async def _run_mongodb(profile, sql, password):
     import motor.motor_asyncio
-    uri = f"mongodb://{profile.username}:{password}@{profile.host}:{profile.port}/{profile.database_name}"
+    uri = f"mongodb://{profile.username}:{password}@{profile.host}:{profile.port}/{profile.database_name}?authSource=admin"
     client = motor.motor_asyncio.AsyncIOMotorClient(uri, serverSelectionTimeoutMS=5000)
     db = client[profile.database_name]
     
@@ -118,14 +118,45 @@ async def _run_mongodb(profile, sql, password):
         if sql.strip().upper() == "SELECT 1":
             await db.command("ping")
             return [{"status": "connected"}], ["status"]
+            
+        if sql.strip() == "__GET_SCHEMA__":
+            collections = await db.list_collection_names()
+            schema_rows = []
+            for coll_name in collections:
+                # get one document to infer schema
+                doc = await db[coll_name].find_one()
+                if doc:
+                    fields = []
+                    for k, v in doc.items():
+                        if k == "_id":
+                            fields.append(f"{k} ObjectId")
+                        else:
+                            t = type(v).__name__
+                            fields.append(f"{k} {t}")
+                    ddl = f"CREATE TABLE {coll_name} ({', '.join(fields)});"
+                    schema_rows.append({"ddl": ddl})
+                else:
+                    schema_rows.append({"ddl": f"CREATE TABLE {coll_name} (_id ObjectId);"})
+            return schema_rows, ["ddl"]
         
         # Experimental execution (assuming sql is JSON)
         import json
-        pipeline = json.loads(sql)
-        cursor = db.get_collection(profile.database_name).aggregate(pipeline)
+        payload = json.loads(sql)
+        if isinstance(payload, dict) and "collection" in payload and "pipeline" in payload:
+            collection_name = payload["collection"]
+            pipeline = payload["pipeline"]
+        else:
+            raise ValueError("Expected a JSON object with 'collection' and 'pipeline' keys.")
+        cursor = db.get_collection(collection_name).aggregate(pipeline)
         rows = await cursor.to_list(length=100)
         if not rows:
             return [], []
+            
+        # MongoDB returns ObjectId which breaks FastAPI JSON serialization
+        for row in rows:
+            if '_id' in row:
+                row['_id'] = str(row['_id'])
+                
         columns = list(rows[0].keys())
         return rows, columns
     finally:
