@@ -82,6 +82,21 @@ async def revoke_token(db: AsyncSession, token_id: int, current_user) -> None:
     await db.commit()
 
 
+async def hard_delete_token(db: AsyncSession, token_id: int, current_user) -> None:
+    token = await db.get(APIToken, token_id)
+    if not token or token.owner_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Token not found")
+    
+    from sqlalchemy import delete
+    from app.models.models import QueryLog
+    
+    # Manual cascade delete for QueryLogs
+    await db.execute(delete(QueryLog).where(QueryLog.token_id == token_id))
+    
+    await db.delete(token)
+    await db.commit()
+
+
 async def rotate_token(db: AsyncSession, token_id: int, current_user) -> dict:
     token = await db.get(APIToken, token_id)
     if not token or token.owner_id != current_user.id:

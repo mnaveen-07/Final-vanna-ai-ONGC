@@ -5,10 +5,10 @@ import { runQuery, previewQuery } from "../../api/client";
 import toast from "react-hot-toast";
 
 const EXAMPLE_QUERIES = [
-  "Show total gatepasses created this month",
-  "List top 10 regions by drilling activity",
-  "How many active users logged in yesterday?",
-  "Show average response time for offshore rigs",
+  "List all the employees who work in the IT department",
+  "Find the email and mobile number for employees located in Chennai",
+  "Show me all employees who have a grade of E4",
+  "Count how many employees there are in each department",
 ];
 
 function ResultTable({ data, columns }) {

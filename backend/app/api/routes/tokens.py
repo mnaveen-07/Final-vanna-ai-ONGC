@@ -6,7 +6,7 @@ from app.db.session import get_db
 from app.schemas.schemas import APITokenCreate, APITokenOut, APITokenCreated
 from app.services.token_service import (
     create_api_token, list_tokens, revoke_token,
-    rotate_token, get_token_usage,
+    rotate_token, get_token_usage, hard_delete_token
 )
 from app.core.security import get_current_user
 
@@ -41,6 +41,16 @@ async def revoke(
     current_user=Depends(get_current_user),
 ):
     await revoke_token(db, token_id, current_user)
+
+
+@router.delete("/{token_id}/hard", status_code=204)
+async def hard_delete(
+    token_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """Permanently delete a token and its query history."""
+    await hard_delete_token(db, token_id, current_user)
 
 
 @router.post("/{token_id}/rotate", response_model=APITokenCreated)

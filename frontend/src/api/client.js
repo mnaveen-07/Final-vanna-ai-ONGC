@@ -51,6 +51,7 @@ export const listTokens = () => api.get("/api/tokens").then((r) => r.data);
 export const createToken = (data) => api.post("/api/tokens", data).then((r) => r.data);
 export const revokeToken = (id) => api.delete(`/api/tokens/${id}`);
 export const rotateToken = (id) => api.post(`/api/tokens/${id}/rotate`).then((r) => r.data);
+export const deleteToken = (id) => api.delete(`/api/tokens/${id}/hard`);
 
 // ─── Query ────────────────────────────────────────────────────────────────────
 export const runQuery = (question, token) =>

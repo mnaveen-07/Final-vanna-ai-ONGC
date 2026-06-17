@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Plus, Copy, Trash2, RotateCcw, Key, AlertTriangle } from "lucide-react";
 import { Card, Button, Input, Select, Badge, PageHeader, EmptyState } from "../ui";
-import { listTokens, createToken, revokeToken, rotateToken, listProfiles } from "../../api/client";
+import { listTokens, createToken, revokeToken, rotateToken, deleteToken, listProfiles } from "../../api/client";
 import toast from "react-hot-toast";
 
 function TokenForm({ profiles, onSave, onCancel }) {
@@ -105,6 +105,13 @@ export default function TokensPage() {
     toast.success("Token rotated");
   };
 
+  const handleDelete = async (id) => {
+    if (!window.confirm("Permanently delete this token and its history?")) return;
+    await deleteToken(id);
+    setTokens((prev) => prev.filter((t) => t.id !== id));
+    toast.success("Token deleted");
+  };
+
   return (
     <div>
       <PageHeader
@@ -160,15 +167,19 @@ export default function TokensPage() {
                   </td>
                   <td style={{ padding: "16px 20px" }}>
                     <div style={{ display: "flex", gap: 6 }}>
-                      {t.is_active && (
+                      {t.is_active ? (
                         <>
-                          <Button variant="ghost" size="sm" onClick={() => handleRotate(t.id)}>
+                          <Button variant="ghost" size="sm" onClick={() => handleRotate(t.id)} title="Rotate Token">
                             <RotateCcw size={14} />
                           </Button>
-                          <Button variant="danger" size="sm" onClick={() => handleRevoke(t.id)}>
+                          <Button variant="danger" size="sm" onClick={() => handleRevoke(t.id)} title="Revoke Token">
                             <Trash2 size={14} />
                           </Button>
                         </>
+                      ) : (
+                        <Button variant="ghost" style={{ color: "var(--danger)" }} size="sm" onClick={() => handleDelete(t.id)} title="Permanently Delete Token">
+                          <Trash2 size={14} />
+                        </Button>
                       )}
                     </div>
                   </td>
