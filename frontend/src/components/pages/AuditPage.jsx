@@ -1,238 +1,184 @@
-import { useEffect, useState, useMemo } from "react";
-import { ScrollText, Search, RefreshCw, Terminal, Filter, ArrowUpDown } from "lucide-react";
-import { Card, Badge, PageHeader, Button } from "../ui";
+import { useState, useEffect } from "react";
+import { Search, Database, ShieldAlert, Activity, CheckCircle, XCircle, ArrowRight, User as UserIcon } from "lucide-react";
+import { Card, Input, Badge, PageHeader, EmptyState, Button } from "../ui";
 import { getAuditLogs } from "../../api/client";
-import toast from "react-hot-toast";
+import { motion, AnimatePresence } from "framer-motion";
 
-const STATUS_BADGE = {
-  success: "success",
-  failed: "danger",
-  blocked: "warning",
+const STATUS_ICONS = {
+  success: <CheckCircle size={14} color="var(--success)" />,
+  error: <XCircle size={14} color="var(--danger)" />,
+  warning: <ShieldAlert size={14} color="var(--warning)" />,
 };
+
+function LogDetailsDrawer({ log, onClose }) {
+  if (!log) return null;
+
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex", justifyContent: "flex-end" }}>
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }} onClick={onClose} />
+      <motion.div initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", damping: 25, stiffness: 200 }} style={{ width: 600, background: "var(--bg-surface)", borderLeft: "1px solid var(--bg-border)", position: "relative", zIndex: 101, display: "flex", flexDirection: "column", boxShadow: "-12px 0 48px rgba(0,0,0,0.5)" }}>
+        
+        <div style={{ padding: "24px 32px", borderBottom: "1px solid var(--bg-border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div>
+            <div style={{ fontSize: 18, fontWeight: 700, color: "var(--text-primary)" }}>Event Details</div>
+            <div style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 4 }}>{new Date(log.created_at).toLocaleString()}</div>
+          </div>
+          <Button variant="ghost" onClick={onClose}>Close</Button>
+        </div>
+
+        <div style={{ padding: 32, flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 24 }}>
+          
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
+            <div style={{ background: "rgba(255,255,255,0.03)", padding: 16, borderRadius: 12 }}>
+              <div style={{ fontSize: 12, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>Action</div>
+              <Badge variant={log.status === "error" ? "danger" : "default"}>{log.action}</Badge>
+            </div>
+            <div style={{ background: "rgba(255,255,255,0.03)", padding: 16, borderRadius: 12 }}>
+              <div style={{ fontSize: 12, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>User Identity</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, fontWeight: 500, color: "var(--text-primary)" }}>
+                <UserIcon size={16} color="var(--accent)" />
+                {log.username || "System"}
+              </div>
+            </div>
+            <div style={{ background: "rgba(255,255,255,0.03)", padding: 16, borderRadius: 12 }}>
+              <div style={{ fontSize: 12, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>IP Address</div>
+              <div style={{ fontSize: 14, fontFamily: "var(--font-mono)", color: "var(--text-secondary)" }}>{log.ip_address || "N/A"}</div>
+            </div>
+            <div style={{ background: "rgba(255,255,255,0.03)", padding: 16, borderRadius: 12 }}>
+              <div style={{ fontSize: 12, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>Status</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 14, fontWeight: 500, color: log.status === "error" ? "var(--danger)" : "var(--success)" }}>
+                {STATUS_ICONS[log.status] || STATUS_ICONS.success}
+                {log.status.toUpperCase()}
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)", marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.05em" }}>Event Payload</div>
+            <pre style={{ background: "#0A0F1E", padding: 20, borderRadius: 12, border: "1px solid var(--bg-border)", overflowX: "auto", fontSize: 13, color: "#D4D4D4", fontFamily: "var(--font-mono)", lineHeight: 1.6 }}>
+              {JSON.stringify(log.details, null, 2)}
+            </pre>
+          </div>
+          
+        </div>
+      </motion.div>
+    </div>
+  );
+}
 
 export default function AuditPage() {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [sortBy, setSortBy] = useState("time_desc"); // time_desc, time_asc, duration_desc, rows_desc
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedLog, setSelectedLog] = useState(null);
 
-  const load = (p = 1) => {
-    setLoading(true);
-    getAuditLogs({ page: p, page_size: 50 })
+  useEffect(() => {
+    getAuditLogs()
       .then(setLogs)
-      .catch(() => toast.error("Failed to load audit logs"))
       .finally(() => setLoading(false));
-  };
+  }, []);
 
-  useEffect(() => { load(); }, []);
-
-  const processedLogs = useMemo(() => {
-    let result = [...logs];
-
-    // Filter by search
-    if (search) {
-      const q = search.toLowerCase();
-      result = result.filter(
-        (l) =>
-          l.natural_language_query?.toLowerCase().includes(q) ||
-          l.user?.full_name?.toLowerCase().includes(q) ||
-          l.user?.username?.toLowerCase().includes(q) ||
-          l.generated_sql?.toLowerCase().includes(q)
-      );
-    }
-
-    // Filter by status
-    if (statusFilter !== "all") {
-      result = result.filter((l) => l.execution_status?.toLowerCase() === statusFilter);
-    }
-
-    // Sort
-    result.sort((a, b) => {
-      switch (sortBy) {
-        case "time_asc":
-          return new Date(a.created_at) - new Date(b.created_at);
-        case "duration_desc":
-          return (b.execution_time_ms || 0) - (a.execution_time_ms || 0);
-        case "rows_desc":
-          return (b.row_count || 0) - (a.row_count || 0);
-        case "time_desc":
-        default:
-          return new Date(b.created_at) - new Date(a.created_at);
-      }
-    });
-
-    return result;
-  }, [logs, search, statusFilter, sortBy]);
+  const filteredLogs = logs.filter((l) => 
+    l.action.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    (l.username || "").toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
-    <div style={{ maxWidth: 1200, margin: "0 auto", paddingBottom: 60 }}>
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
       <PageHeader
-        title="Audit Logs"
-        subtitle="Complete history of all queries executed through the platform"
-        action={
-          <Button variant="ghost" onClick={() => load()} loading={loading} style={{ borderRadius: 20 }}>
-            <RefreshCw size={14} />
-            Refresh
-          </Button>
-        }
+        title="Security Activity Center"
+        subtitle="Monitor all authentication, data access, and infrastructure changes across the ONGC Command Center platform."
       />
 
-      {/* Controls Bar */}
-      <div style={{ display: "flex", gap: 16, marginBottom: 24, flexWrap: "wrap" }}>
-        
-        {/* Search */}
-        <div className="input-focus-ring" style={{ position: "relative", flex: 1, minWidth: 280, borderRadius: 20, transition: "all 0.2s" }}>
-          <Search size={16} style={{ position: "absolute", left: 16, top: "50%", transform: "translateY(-50%)", color: "var(--accent)" }} />
-          <input
-            placeholder="Search intent, user, or SQL…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            style={{
-              width: "100%", background: "var(--bg-surface)", border: "1px solid var(--bg-border)",
-              borderRadius: 20, padding: "12px 16px 12px 42px", color: "var(--text-primary)",
-              fontSize: 14, outline: "none", boxShadow: "var(--shadow-sm)",
-            }}
-          />
-        </div>
-
-        {/* Filters & Sorting */}
-        <div style={{ display: "flex", gap: 12 }}>
-          <div style={{ display: "flex", alignItems: "center", background: "var(--bg-surface)", borderRadius: 20, padding: "4px", border: "1px solid var(--bg-border)", boxShadow: "var(--shadow-sm)" }}>
-            <div style={{ padding: "0 12px", color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 500 }}>
-              <Filter size={14} /> Status:
-            </div>
-            {["all", "success", "failed"].map((status) => (
-              <button
-                key={status}
-                onClick={() => setStatusFilter(status)}
-                style={{
-                  padding: "6px 16px", borderRadius: 16, fontSize: 13, fontWeight: 600, cursor: "pointer", border: "none",
-                  background: statusFilter === status ? "var(--accent-glow)" : "transparent",
-                  color: statusFilter === status ? "var(--accent)" : "var(--text-secondary)",
-                  transition: "all 0.2s", textTransform: "capitalize"
-                }}
-              >
-                {status}
-              </button>
-            ))}
-          </div>
-
-          <div style={{ display: "flex", alignItems: "center", background: "var(--bg-surface)", borderRadius: 20, padding: "4px 12px", border: "1px solid var(--bg-border)", boxShadow: "var(--shadow-sm)" }}>
-            <ArrowUpDown size={14} color="var(--text-muted)" style={{ marginRight: 8 }} />
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              style={{
-                background: "transparent", border: "none", color: "var(--text-primary)", fontSize: 13,
-                fontWeight: 500, outline: "none", cursor: "pointer"
-              }}
-            >
-              <option value="time_desc" style={{ background: "var(--bg-base)" }}>Newest First</option>
-              <option value="time_asc" style={{ background: "var(--bg-base)" }}>Oldest First</option>
-              <option value="duration_desc" style={{ background: "var(--bg-base)" }}>Slowest Queries</option>
-              <option value="rows_desc" style={{ background: "var(--bg-base)" }}>Most Rows</option>
-            </select>
-          </div>
-        </div>
+      <div style={{ marginBottom: 32 }}>
+        <Input 
+          placeholder="Search events by action, user, or IP address..." 
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          style={{ maxWidth: 500 }}
+        />
       </div>
 
-      {/* Table */}
-      <div className="glass-panel" style={{ padding: 0, overflow: "hidden" }}>
-        {loading && logs.length === 0 ? (
-          <div style={{ textAlign: "center", padding: 60, color: "var(--text-muted)" }}>Loading telemetry…</div>
-        ) : processedLogs.length === 0 ? (
-          <div style={{ textAlign: "center", padding: 80, color: "var(--text-muted)" }}>
-            <ScrollText size={48} style={{ opacity: 0.2, margin: "0 auto 16px", color: "var(--accent)" }} />
-            <div style={{ fontSize: 16, fontWeight: 500, color: "var(--text-primary)" }}>No logs found</div>
-            <div style={{ fontSize: 13, marginTop: 4 }}>Try adjusting your search filters.</div>
-          </div>
-        ) : (
+      {loading ? (
+        <div style={{ color: "var(--text-muted)", textAlign: "center", padding: 80, display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
+          <Activity size={32} className="pulse-glow" style={{ opacity: 0.5 }} />
+          <div>Analyzing security logs...</div>
+        </div>
+      ) : filteredLogs.length === 0 ? (
+        <EmptyState
+          icon={ShieldAlert}
+          title="No Security Events Found"
+          description="There are no audit logs matching your current search filters."
+        />
+      ) : (
+        <Card style={{ padding: 0, overflow: "hidden", borderRadius: 24, border: "1px solid var(--bg-border)", boxShadow: "0 12px 32px rgba(0,0,0,0.4)" }}>
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
               <thead>
-                <tr style={{ background: "rgba(0,0,0,0.02)", borderBottom: "1px solid var(--bg-border)" }}>
-                  {["Time", "User", "Intent", "Status", "SQL Segment", "Metrics", "IP"].map((h) => (
-                    <th
-                      key={h}
-                      style={{
-                        padding: "16px 20px", textAlign: "left", color: "var(--text-muted)",
-                        fontWeight: 700, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em", whiteSpace: "nowrap",
-                      }}
-                    >
-                      {h}
-                    </th>
-                  ))}
+                <tr style={{ background: "rgba(255,255,255,0.03)" }}>
+                  <th style={{ padding: "20px 24px", textAlign: "left", color: "var(--text-secondary)", fontWeight: 600, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: "1px solid var(--bg-border)" }}>Timestamp</th>
+                  <th style={{ padding: "20px 24px", textAlign: "left", color: "var(--text-secondary)", fontWeight: 600, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: "1px solid var(--bg-border)" }}>User / Entity</th>
+                  <th style={{ padding: "20px 24px", textAlign: "left", color: "var(--text-secondary)", fontWeight: 600, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: "1px solid var(--bg-border)" }}>Action</th>
+                  <th style={{ padding: "20px 24px", textAlign: "left", color: "var(--text-secondary)", fontWeight: 600, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: "1px solid var(--bg-border)" }}>Status</th>
+                  <th style={{ padding: "20px 24px", textAlign: "left", color: "var(--text-secondary)", fontWeight: 600, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: "1px solid var(--bg-border)" }}>Target</th>
+                  <th style={{ padding: "20px 24px", textAlign: "right", color: "var(--text-secondary)", fontWeight: 600, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: "1px solid var(--bg-border)" }}></th>
                 </tr>
               </thead>
               <tbody>
-                {processedLogs.map((log) => (
-                  <tr
-                    key={log.id}
-                    className="hover-glow"
-                    style={{ borderBottom: "1px solid var(--bg-border)", transition: "all 0.2s", background: "transparent" }}
-                  >
-                    <td style={{ padding: "16px 20px", color: "var(--text-muted)", whiteSpace: "nowrap", fontSize: 12 }}>
-                      {new Date(log.created_at).toLocaleString()}
-                    </td>
-                    <td style={{ padding: "16px 20px", whiteSpace: "nowrap" }}>
-                      {log.user ? (
-                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                          <div style={{ width: 28, height: 28, borderRadius: "50%", background: "var(--accent-glow)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--accent)", fontWeight: 700, fontSize: 12 }}>
-                            {log.user.full_name.charAt(0).toUpperCase()}
-                          </div>
-                          <div>
-                            <div style={{ color: "var(--text-primary)", fontWeight: 600, fontSize: 13 }}>{log.user.full_name}</div>
-                            <div style={{ color: "var(--text-muted)", fontSize: 11 }}>@{log.user.username}</div>
-                          </div>
-                        </div>
-                      ) : (
-                        <div style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--text-muted)" }}>
-                          <Terminal size={14} /> System / API
-                        </div>
-                      )}
-                    </td>
-                    <td
+                <AnimatePresence>
+                  {filteredLogs.map((log, i) => (
+                    <motion.tr
+                      key={log.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.02 }}
+                      className="hover-glow"
+                      onClick={() => setSelectedLog(log)}
                       style={{
-                        padding: "16px 20px", color: "var(--text-secondary)", fontWeight: 500,
-                        maxWidth: 280, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                        borderBottom: i === filteredLogs.length - 1 ? "none" : "1px solid var(--bg-border)",
+                        background: log.status === "error" ? "rgba(239, 68, 68, 0.05)" : i % 2 === 0 ? "transparent" : "rgba(255,255,255,0.02)",
+                        cursor: "pointer"
                       }}
-                      title={log.natural_language_query}
                     >
-                      {log.natural_language_query}
-                    </td>
-                    <td style={{ padding: "16px 20px" }}>
-                      <Badge variant={STATUS_BADGE[log.execution_status] || "default"}>
-                        {log.execution_status}
-                      </Badge>
-                    </td>
-                    <td
-                      className="sql-mono"
-                      style={{
-                        padding: "16px 20px", color: "var(--accent-secondary)",
-                        maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                      }}
-                      title={log.generated_sql}
-                    >
-                      {log.generated_sql || "—"}
-                    </td>
-                    <td style={{ padding: "16px 20px", whiteSpace: "nowrap" }}>
-                      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                        <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{log.row_count ?? "0"} rows</span>
-                        <span style={{ width: 4, height: 4, borderRadius: "50%", background: "var(--bg-border)" }}></span>
-                        <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{log.execution_time_ms ? `${Math.round(log.execution_time_ms)}ms` : "—"}</span>
-                      </div>
-                    </td>
-                    <td style={{ padding: "16px 20px", color: "var(--text-muted)", fontFamily: "monospace", fontSize: 12 }}>
-                      {log.ip_address || "—"}
-                    </td>
-                  </tr>
-                ))}
+                      <td style={{ padding: "18px 24px", color: "var(--text-muted)", fontFamily: "var(--font-mono)" }}>
+                        {new Date(log.created_at).toLocaleString()}
+                      </td>
+                      <td style={{ padding: "18px 24px", color: "var(--text-primary)", fontWeight: 500, display: "flex", alignItems: "center", gap: 8 }}>
+                        <div style={{ width: 24, height: 24, borderRadius: "50%", background: "rgba(255,107,53,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <UserIcon size={12} color="var(--accent)" />
+                        </div>
+                        {log.username || "System"}
+                      </td>
+                      <td style={{ padding: "18px 24px" }}>
+                        <Badge variant="default">{log.action}</Badge>
+                      </td>
+                      <td style={{ padding: "18px 24px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 500, color: log.status === "error" ? "var(--danger)" : "var(--success)" }}>
+                          {STATUS_ICONS[log.status] || STATUS_ICONS.success}
+                          {log.status.toUpperCase()}
+                        </div>
+                      </td>
+                      <td style={{ padding: "18px 24px", color: "var(--text-secondary)" }}>
+                        {log.details?.target || log.details?.profile_name || log.details?.token_name || "Platform"}
+                      </td>
+                      <td style={{ padding: "18px 24px", textAlign: "right" }}>
+                        <Button variant="ghost" size="sm" style={{ padding: "6px 10px", borderRadius: 8 }}>
+                          Details <ArrowRight size={14} />
+                        </Button>
+                      </td>
+                    </motion.tr>
+                  ))}
+                </AnimatePresence>
               </tbody>
             </table>
           </div>
-        )}
-      </div>
-    </div>
+        </Card>
+      )}
+
+      <AnimatePresence>
+        {selectedLog && <LogDetailsDrawer log={selectedLog} onClose={() => setSelectedLog(null)} />}
+      </AnimatePresence>
+
+    </motion.div>
   );
 }

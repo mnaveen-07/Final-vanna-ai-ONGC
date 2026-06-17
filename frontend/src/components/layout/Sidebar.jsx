@@ -1,73 +1,69 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Database, Key, MessageSquare,
-  ScrollText, Settings, LogOut, Brain, ChevronRight,
+  ScrollText, Settings, Brain, ChevronRight,
 } from "lucide-react";
-import { useAuth } from "../../hooks/useAuth";
-import toast from "react-hot-toast";
+import { motion } from "framer-motion";
 
 const NAV = [
-  { to: "/dashboard",  label: "Dashboard",    icon: LayoutDashboard },
-  { to: "/query",      label: "Query",         icon: MessageSquare },
-  { to: "/profiles",   label: "DB Profiles",   icon: Database },
-  { to: "/tokens",     label: "API Tokens",    icon: Key },
-  { to: "/audit",      label: "Audit Logs",    icon: ScrollText },
-  { to: "/settings",   label: "Settings",      icon: Settings },
+  { to: "/dashboard",  label: "Overview",    icon: LayoutDashboard },
+  { to: "/query",      label: "AI Command",  icon: MessageSquare },
+  { to: "/profiles",   label: "Databases",   icon: Database },
+  { to: "/tokens",     label: "API Tokens",  icon: Key },
+  { to: "/audit",      label: "Audit Logs",  icon: ScrollText },
+  { to: "/settings",   label: "Settings",    icon: Settings },
 ];
 
 export default function Sidebar() {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
-
-  const handleLogout = () => {
-    logout();
-    toast.success("Logged out");
-    navigate("/login");
-  };
-
   return (
-    <aside
+    <motion.aside
+      initial={{ x: -280 }}
+      animate={{ x: 0 }}
+      transition={{ type: "spring", stiffness: 300, damping: 30 }}
       style={{
-        width: 240,
-        minHeight: "100vh",
+        width: 260,
+        margin: "16px 0 16px 16px",
+        borderRadius: 24,
         background: "var(--bg-surface)",
-        backdropFilter: "blur(20px)",
-        WebkitBackdropFilter: "blur(20px)",
-        borderRight: "1px solid var(--bg-border)",
+        backdropFilter: "blur(24px)",
+        WebkitBackdropFilter: "blur(24px)",
+        border: "1px solid var(--bg-border)",
         display: "flex",
         flexDirection: "column",
         flexShrink: 0,
-        transition: "all 0.3s ease",
+        boxShadow: "var(--shadow-sm)",
+        overflow: "hidden"
       }}
     >
-      {/* Logo */}
-      <div style={{ padding: "24px 20px 20px", borderBottom: "1px solid var(--bg-border)" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+      {/* Logo Area */}
+      <div style={{ padding: "32px 24px 24px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <div
             style={{
-              width: 34,
-              height: 34,
-              borderRadius: 8,
+              width: 38,
+              height: 38,
+              borderRadius: 12,
               background: "linear-gradient(135deg, var(--accent), var(--accent-secondary))",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              boxShadow: "0 0 12px var(--accent-glow)",
+              boxShadow: "0 4px 16px var(--accent-glow)",
             }}
           >
-            <Brain size={18} color="#fff" />
+            <Brain size={20} color="#050816" />
           </div>
           <div>
-            <div style={{ fontWeight: 800, fontSize: 15, color: "var(--text-primary)", letterSpacing: "0.02em" }}>
+            <div style={{ fontWeight: 800, fontSize: 16, color: "var(--text-primary)", letterSpacing: "-0.02em" }}>
               ONGC Vanna
             </div>
-            <div style={{ fontSize: 11, color: "var(--accent-secondary)", fontWeight: 500, letterSpacing: "0.05em", textTransform: "uppercase" }}>Command Center</div>
+            <div style={{ fontSize: 10, color: "var(--text-muted)", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", marginTop: 2 }}>Command Center</div>
           </div>
         </div>
       </div>
 
       {/* Nav */}
-      <nav style={{ flex: 1, padding: "12px 10px" }}>
+      <nav style={{ flex: 1, padding: "0 16px" }}>
+        <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-muted)", letterSpacing: "0.05em", textTransform: "uppercase", padding: "0 12px", marginBottom: 12 }}>Platform Menu</div>
         {NAV.map(({ to, label, icon: Icon }) => (
           <NavLink
             key={to}
@@ -75,28 +71,38 @@ export default function Sidebar() {
             style={({ isActive }) => ({
               display: "flex",
               alignItems: "center",
-              gap: 10,
-              padding: "9px 12px",
-              borderRadius: 8,
-              marginBottom: 2,
+              gap: 12,
+              padding: "10px 14px",
+              borderRadius: 12,
+              marginBottom: 4,
               textDecoration: "none",
-              fontSize: 13,
-              fontWeight: isActive ? 600 : 400,
+              fontSize: 14,
+              fontWeight: isActive ? 600 : 500,
               color: isActive ? "var(--text-primary)" : "var(--text-secondary)",
-              background: isActive ? "var(--accent-glow)" : "transparent",
-              borderLeft: isActive ? "3px solid var(--accent)" : "3px solid transparent",
-              transition: "all 0.15s",
+              background: isActive ? "rgba(255, 107, 53, 0.1)" : "transparent",
+              transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+              position: "relative",
             })}
           >
-            <Icon size={16} />
-            {label}
-            {window.location.pathname === to && (
-              <ChevronRight size={12} style={{ marginLeft: "auto" }} />
+            {({ isActive }) => (
+              <>
+                {isActive && (
+                  <motion.div
+                    layoutId="activeNav"
+                    style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: "var(--accent)", borderRadius: 4, boxShadow: "0 0 12px var(--accent-glow)" }}
+                  />
+                )}
+                <Icon size={18} color={isActive ? "var(--accent)" : "currentColor"} />
+                {label}
+                {isActive && (
+                  <ChevronRight size={14} style={{ marginLeft: "auto", color: "var(--accent)" }} />
+                )}
+              </>
             )}
           </NavLink>
         ))}
       </nav>
 
-    </aside>
+    </motion.aside>
   );
 }
