@@ -1,12 +1,78 @@
+import { useState, useEffect } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import { useAuth } from "../../hooks/useAuth";
-import { LogOut, User, Search, Bell, Command } from "lucide-react";
+import { LogOut, User, Search, Bell, Command, Database, Terminal, Shield, Key, Settings } from "lucide-react";
 import toast from "react-hot-toast";
+import { motion, AnimatePresence } from "framer-motion";
+
+function CommandPalette({ isOpen, onClose }) {
+  const navigate = useNavigate();
+
+  const handleNav = (path) => {
+    navigate(path);
+    onClose();
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 9999, display: "flex", justifyContent: "center", paddingTop: 100 }}>
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)" }} onClick={onClose} />
+      <motion.div initial={{ opacity: 0, scale: 0.95, y: -20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }} style={{ width: 600, background: "var(--bg-surface)", border: "1px solid var(--bg-border)", borderRadius: 16, overflow: "hidden", position: "relative", zIndex: 10000, boxShadow: "0 24px 64px rgba(0,0,0,0.8)" }}>
+        <div style={{ display: "flex", alignItems: "center", padding: "16px 24px", borderBottom: "1px solid var(--bg-border)" }}>
+          <Search size={20} color="var(--accent)" />
+          <input autoFocus placeholder="Type a command or search..." style={{ flex: 1, background: "transparent", border: "none", color: "var(--text-primary)", fontSize: 16, outline: "none", padding: "0 16px" }} />
+          <div style={{ fontSize: 11, color: "var(--text-muted)", background: "rgba(255,255,255,0.05)", padding: "4px 8px", borderRadius: 4 }}>ESC</div>
+        </div>
+        <div style={{ padding: 12 }}>
+          <div style={{ fontSize: 11, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", padding: "8px 12px", fontWeight: 600 }}>Quick Actions</div>
+          {[
+            { icon: Terminal, label: "AI Query Engine", path: "/query" },
+            { icon: Database, label: "Manage Infrastructure", path: "/profiles" },
+            { icon: Key, label: "Generate API Token", path: "/tokens" },
+            { icon: Shield, label: "Security Activity", path: "/audit" },
+            { icon: Settings, label: "Platform Settings", path: "/settings" }
+          ].map((item) => (
+            <div key={item.path} onClick={() => handleNav(item.path)} className="hover-glow" style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", borderRadius: 8, cursor: "pointer", color: "var(--text-secondary)" }}>
+              <item.icon size={16} />
+              <span style={{ fontSize: 14, fontWeight: 500 }}>{item.label}</span>
+            </div>
+          ))}
+        </div>
+      </motion.div>
+    </div>
+  );
+}
 
 export default function AppLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [profilePic, setProfilePic] = useState(localStorage.getItem(`profile_pic_${user?.username}`));
+
+  useEffect(() => {
+    setProfilePic(localStorage.getItem(`profile_pic_${user?.username}`));
+  }, [user?.username]);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setPaletteOpen((prev) => !prev);
+      }
+      if (e.key === "Escape") setPaletteOpen(false);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    
+    const handlePicChange = () => setProfilePic(localStorage.getItem(`profile_pic_${user?.username}`));
+    window.addEventListener("profilePicChanged", handlePicChange);
+    
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("profilePicChanged", handlePicChange);
+    };
+  }, []);
 
   const handleLogout = () => {
     logout();
@@ -37,10 +103,10 @@ export default function AppLayout() {
             style={{ 
               display: "flex", alignItems: "center", gap: 12, 
               background: "var(--bg-surface)", padding: "10px 16px", borderRadius: 12,
-              border: "1px solid var(--bg-border)", width: 300, cursor: "text",
+              border: "1px solid var(--bg-border)", width: 300, cursor: "pointer",
               backdropFilter: "blur(24px)", WebkitBackdropFilter: "blur(24px)"
             }}
-            onClick={() => toast("Command Palette coming soon!", { icon: "⌘" })}
+            onClick={() => setPaletteOpen(true)}
           >
             <Search size={16} color="var(--text-muted)" />
             <span style={{ color: "var(--text-muted)", fontSize: 13, flex: 1 }}>Search anywhere...</span>
@@ -82,10 +148,15 @@ export default function AppLayout() {
                   fontWeight: 700,
                   fontSize: 16,
                   border: "1px solid rgba(255, 107, 53, 0.2)",
-                  boxShadow: "0 4px 12px rgba(255,107,53,0.1)"
+                  boxShadow: "0 4px 12px rgba(255,107,53,0.1)",
+                  overflow: "hidden"
                 }}
               >
-                {user?.full_name?.charAt(0).toUpperCase() || <User size={20} />}
+                {profilePic ? (
+                  <img src={profilePic} alt="Profile" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                ) : (
+                  user?.full_name?.charAt(0).toUpperCase() || <User size={20} />
+                )}
               </div>
             </div>
 
@@ -122,6 +193,10 @@ export default function AppLayout() {
           <Outlet />
         </main>
       </div>
+
+      <AnimatePresence>
+        <CommandPalette isOpen={paletteOpen} onClose={() => setPaletteOpen(false)} />
+      </AnimatePresence>
     </div>
   );
 }

@@ -25,7 +25,10 @@ const AI_FEED = [
   { id: 5, type: "auth", text: "New API token provisioned for 'Data Pipeline A'.", time: "5h ago", status: "info" },
 ];
 
+import { useAuth } from "../../hooks/useAuth";
+
 export default function Dashboard() {
+  const { user } = useAuth();
   const [stats, setStats] = useState(MOCK_STATS);
   const [loading, setLoading] = useState(true);
 
@@ -84,7 +87,7 @@ export default function Dashboard() {
         </div>
 
         <h1 style={{ fontSize: 42, fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.03em", zIndex: 1, marginTop: 8 }}>
-          Welcome back, <span style={{ background: "linear-gradient(90deg, var(--text-primary), var(--text-muted))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Naveen</span>
+          Welcome back, <span style={{ background: "linear-gradient(90deg, var(--text-primary), var(--text-muted))", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>{user?.full_name?.split(' ')[0] || user?.username || 'User'}</span>
         </h1>
         <p style={{ fontSize: 16, color: "var(--text-secondary)", maxWidth: 600, zIndex: 1, lineHeight: 1.6 }}>
           Your AI Command Center is monitoring <strong>{stats.active_profiles} active databases</strong> and processing natural language telemetry in real-time.

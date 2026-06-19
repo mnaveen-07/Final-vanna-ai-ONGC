@@ -43,14 +43,15 @@ export default function Sidebar() {
               width: 38,
               height: 38,
               borderRadius: 12,
-              background: "linear-gradient(135deg, var(--accent), var(--accent-secondary))",
+              background: "#fff",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               boxShadow: "0 4px 16px var(--accent-glow)",
+              overflow: "hidden"
             }}
           >
-            <Brain size={20} color="#050816" />
+            <img src="https://upload.wikimedia.org/wikipedia/en/9/9a/ONGC_Logo.svg" alt="ONGC Logo" style={{ width: "100%", height: "100%", objectFit: "contain", padding: "4px" }} />
           </div>
           <div>
             <div style={{ fontWeight: 800, fontSize: 16, color: "var(--text-primary)", letterSpacing: "-0.02em" }}>

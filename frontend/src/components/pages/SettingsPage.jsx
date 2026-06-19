@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { User, Lock, Bell, Palette, Monitor, Terminal, Database, Save, Upload, KeyRound, ShieldAlert, Laptop } from "lucide-react";
 import { Card, Input, Button, PageHeader } from "../ui";
 import { useAuth } from "../../hooks/useAuth";
@@ -10,13 +10,68 @@ export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState("profile");
   
   const [loading, setLoading] = useState(false);
+  
+  const [theme, setTheme] = useState(document.documentElement.classList.contains("light") ? "light" : "dark");
+  const [profilePic, setProfilePic] = useState(localStorage.getItem(`profile_pic_${user?.username}`) || null);
+  const [formName, setFormName] = useState(user?.full_name || user?.username || "");
+  const [formUsername, setFormUsername] = useState(user?.username || "");
 
-  const handleSave = () => {
+  const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    if (theme === "light") {
+      document.documentElement.classList.add("light");
+    } else {
+      document.documentElement.classList.remove("light");
+    }
+  }, [theme]);
+
+  const handleSaveProfile = () => {
     setLoading(true);
     setTimeout(() => {
       setLoading(false);
-      toast.success("Settings saved successfully");
-    }, 800);
+      toast.success("Profile updated locally");
+    }, 500);
+  };
+
+  const handlePicUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProfilePic(reader.result);
+        localStorage.setItem(`profile_pic_${user?.username}`, reader.result);
+        window.dispatchEvent(new Event("profilePicChanged"));
+        toast.success("Profile picture updated!");
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleDownloadLogs = () => {
+    const logs = JSON.stringify({
+      userAgent: navigator.userAgent,
+      timestamp: new Date().toISOString(),
+      theme: document.documentElement.classList.contains("light") ? "light" : "dark",
+      localStorage: { ...localStorage }
+    }, null, 2);
+    const blob = new Blob([logs], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "vanna_debug_logs.json";
+    a.click();
+    toast.success("Debug logs downloaded");
+  };
+
+  const handleClearCache = () => {
+    if (window.confirm("Are you sure you want to clear the local cache? This will reset your theme and profile picture.")) {
+      const token = localStorage.getItem("access_token");
+      localStorage.clear();
+      if (token) localStorage.setItem("access_token", token);
+      toast.success("Local cache cleared!");
+      setTimeout(() => window.location.reload(), 1000);
+    }
   };
 
   const TABS = [
@@ -73,28 +128,32 @@ export default function SettingsPage() {
               <Card style={{ padding: 40, borderRadius: 24 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 24, marginBottom: 40 }}>
                   <div style={{ position: "relative" }}>
-                    <div style={{ width: 96, height: 96, borderRadius: "50%", background: "var(--bg-elevated)", border: "2px dashed var(--bg-border)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted)" }}>
-                      <User size={32} />
+                    <div style={{ width: 96, height: 96, borderRadius: "50%", background: "var(--bg-elevated)", border: "2px dashed var(--bg-border)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted)", overflow: "hidden" }}>
+                      {profilePic ? (
+                        <img src={profilePic} alt="Profile" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      ) : (
+                        <User size={32} />
+                      )}
                     </div>
-                    <button style={{ position: "absolute", bottom: 0, right: 0, width: 32, height: 32, borderRadius: "50%", background: "var(--accent)", color: "#fff", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 4px 12px var(--accent-glow)" }}>
+                    <input type="file" ref={fileInputRef} onChange={handlePicUpload} accept="image/*" style={{ display: "none" }} />
+                    <button onClick={() => fileInputRef.current?.click()} style={{ position: "absolute", bottom: 0, right: 0, width: 32, height: 32, borderRadius: "50%", background: "var(--accent)", color: "#fff", border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 4px 12px var(--accent-glow)" }}>
                       <Upload size={14} />
                     </button>
                   </div>
                   <div>
-                    <h3 style={{ fontSize: 20, fontWeight: 700, margin: "0 0 4px 0", color: "var(--text-primary)" }}>{user?.full_name || user?.username}</h3>
+                    <h3 style={{ fontSize: 20, fontWeight: 700, margin: "0 0 4px 0", color: "var(--text-primary)" }}>{formName || "User"}</h3>
                     <p style={{ fontSize: 14, color: "var(--text-secondary)", margin: 0 }}>Update your photo and personal details.</p>
                   </div>
                 </div>
 
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, marginBottom: 32 }}>
-                  <Input label="Full Name" defaultValue={user?.full_name || ""} />
-                  <Input label="Email Address" defaultValue="naveen@ongc.co.in" />
-                  <Input label="Username" defaultValue={user?.username || ""} disabled />
+                  <Input label="Full Name" value={formName} onChange={(e) => setFormName(e.target.value)} />
+                  <Input label="Username" value={formUsername} onChange={(e) => setFormUsername(e.target.value)} />
                   <Input label="Role" defaultValue={user?.role?.toUpperCase()} disabled />
                 </div>
 
                 <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                  <Button onClick={handleSave} loading={loading} size="lg"><Save size={16} /> Save Changes</Button>
+                  <Button onClick={handleSaveProfile} loading={loading} size="lg"><Save size={16} /> Save Changes</Button>
                 </div>
               </Card>
             )}
@@ -108,7 +167,7 @@ export default function SettingsPage() {
                     <Input label="Current Password" type="password" />
                     <Input label="New Password" type="password" />
                     <Input label="Confirm New Password" type="password" />
-                    <Button onClick={handleSave} loading={loading} style={{ alignSelf: "flex-start", marginTop: 8 }}>Update Password</Button>
+                    <Button onClick={handleSaveProfile} loading={loading} style={{ alignSelf: "flex-start", marginTop: 8 }}>Update Password</Button>
                   </div>
                 </Card>
 
@@ -127,14 +186,15 @@ export default function SettingsPage() {
                 
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 24 }}>
                   {/* System Theme Card */}
-                  <div className="hover-glow" style={{ padding: 16, border: "2px solid var(--accent)", borderRadius: 16, cursor: "pointer", background: "var(--bg-elevated)", position: "relative" }}>
-                    <div style={{ position: "absolute", top: 12, right: 12, background: "var(--accent)", color: "#000", fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 4 }}>ACTIVE</div>
+                  <div onClick={() => setTheme("dark")} className="hover-glow" style={{ padding: 16, border: theme === "dark" ? "2px solid var(--accent)" : "1px solid var(--bg-border)", borderRadius: 16, cursor: "pointer", background: "var(--bg-elevated)", position: "relative", opacity: theme === "dark" ? 1 : 0.5 }}>
+                    {theme === "dark" && <div style={{ position: "absolute", top: 12, right: 12, background: "var(--accent)", color: "#000", fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 4 }}>ACTIVE</div>}
                     <div style={{ height: 100, background: "linear-gradient(135deg, #0f1117, #1e2535)", borderRadius: 8, marginBottom: 16, border: "1px solid var(--bg-border)", display: "flex", alignItems: "center", justifyContent: "center" }}><Laptop size={32} color="var(--text-muted)" /></div>
                     <div style={{ fontWeight: 600, fontSize: 14, textAlign: "center" }}>Deep Space (Default)</div>
                   </div>
 
                   {/* Light Theme Card */}
-                  <div className="hover-glow" style={{ padding: 16, border: "1px solid var(--bg-border)", borderRadius: 16, cursor: "pointer", background: "var(--bg-surface)", opacity: 0.5 }}>
+                  <div onClick={() => setTheme("light")} className="hover-glow" style={{ padding: 16, border: theme === "light" ? "2px solid var(--accent)" : "1px solid var(--bg-border)", borderRadius: 16, cursor: "pointer", background: "var(--bg-surface)", position: "relative", opacity: theme === "light" ? 1 : 0.5 }}>
+                    {theme === "light" && <div style={{ position: "absolute", top: 12, right: 12, background: "var(--accent)", color: "#000", fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 4 }}>ACTIVE</div>}
                     <div style={{ height: 100, background: "linear-gradient(135deg, #f8fafc, #e2e8f0)", borderRadius: 8, marginBottom: 16, border: "1px solid #cbd5e1", display: "flex", alignItems: "center", justifyContent: "center" }}><Palette size={32} color="#94a3b8" /></div>
                     <div style={{ fontWeight: 600, fontSize: 14, textAlign: "center" }}>Light Mode</div>
                   </div>
@@ -162,8 +222,8 @@ export default function SettingsPage() {
                 </div>
 
                 <div style={{ marginTop: 24, display: "flex", gap: 12 }}>
-                  <Button variant="ghost">Download Debug Logs</Button>
-                  <Button variant="danger">Clear Local Cache</Button>
+                  <Button variant="ghost" onClick={handleDownloadLogs}>Download Debug Logs</Button>
+                  <Button variant="danger" onClick={handleClearCache}>Clear Local Cache</Button>
                 </div>
               </Card>
             )}

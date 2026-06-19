@@ -15,8 +15,8 @@ function TokenForm({ profiles, onSave, onCancel }) {
     try {
       const t = await createToken({
         name: form.name,
-        connection_profile_id: parseInt(form.profile_id),
-        limit_per_minute: parseInt(form.limit_per_minute)
+        profile_id: parseInt(form.profile_id),
+        rate_limit_per_minute: parseInt(form.limit_per_minute)
       });
       toast.success("Token generated");
       onSave(t);
@@ -122,12 +122,12 @@ export default function TokensPage() {
                 Make sure to copy your new API key right now. You won't be able to see it again!
               </p>
               <div style={{ display: "flex", gap: 12, alignItems: "center", background: "rgba(0,0,0,0.3)", padding: 16, borderRadius: 12, border: "1px solid var(--bg-border)" }}>
-                <code style={{ fontSize: 16, color: "var(--text-primary)", flex: 1, letterSpacing: "0.05em", fontFamily: "var(--font-mono)" }}>{newToken.raw_token}</code>
-                <Button variant="ghost" onClick={() => { navigator.clipboard.writeText(newToken.raw_token); toast.success("Copied to clipboard!"); }}>
+                <code style={{ fontSize: 16, color: "var(--text-primary)", flex: 1, letterSpacing: "0.05em", fontFamily: "var(--font-mono)" }}>{newToken.token}</code>
+                <Button variant="ghost" onClick={() => { navigator.clipboard.writeText(newToken.token); toast.success("Copied to clipboard!"); }}>
                   <Copy size={16} /> Copy
                 </Button>
               </div>
-              <Button style={{ marginTop: 20 }} variant="ghost" onClick={() => { setNewToken(null); setTokens(prev => [newToken.token_db, ...prev.filter(t => t.id !== newToken.token_db.id)]); }}>
+              <Button style={{ marginTop: 20 }} variant="ghost" onClick={() => { setNewToken(null); setTokens(prev => [newToken, ...prev.filter(t => t.id !== newToken.id)]); }}>
                 I have saved it securely
               </Button>
             </Card>
@@ -178,9 +178,9 @@ export default function TokensPage() {
                       }}
                     >
                       <td style={{ padding: "20px 24px", color: "var(--text-primary)", fontWeight: 600 }}>{t.name}</td>
-                      <td style={{ padding: "20px 24px", color: "var(--accent-secondary)", fontFamily: "var(--font-mono)", fontSize: 13 }}>{t.prefix}...</td>
-                      <td style={{ padding: "20px 24px", color: "var(--text-secondary)", fontSize: 13 }}>Profile ID: {t.connection_profile_id}</td>
-                      <td style={{ padding: "20px 24px", color: "var(--text-secondary)", fontSize: 13 }}>{t.limit_per_minute}/min</td>
+                      <td style={{ padding: "20px 24px", color: "var(--accent-secondary)", fontFamily: "var(--font-mono)", fontSize: 13 }}>{t.token_prefix}...</td>
+                      <td style={{ padding: "20px 24px", color: "var(--text-secondary)", fontSize: 13 }}>Profile ID: {t.profile_id}</td>
+                      <td style={{ padding: "20px 24px", color: "var(--text-secondary)", fontSize: 13 }}>{t.rate_limit_per_minute}/min</td>
                       <td style={{ padding: "20px 24px", color: "var(--text-secondary)", fontSize: 13 }}>{t.usage_count} calls</td>
                       <td style={{ padding: "20px 24px" }}>
                         <Badge variant={t.is_active ? "success" : "danger"}>
