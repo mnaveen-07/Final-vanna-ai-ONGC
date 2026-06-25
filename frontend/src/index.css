@@ -10,10 +10,10 @@
   color-scheme: dark;
   /* Deep Space Black Background */
   --bg-base: #050816;
-  --bg-overlay: rgba(5, 8, 22, 0.88);
-  --bg-surface: rgba(10, 15, 30, 0.65);
-  --bg-elevated: rgba(16, 24, 39, 0.7);
-  --bg-border: rgba(255, 255, 255, 0.08);
+  --bg-overlay: rgba(5, 8, 22, 0.75);
+  --bg-surface: rgba(10, 15, 30, 0.45);
+  --bg-elevated: rgba(16, 24, 39, 0.55);
+  --bg-border: rgba(255, 255, 255, 0.10);
   
   /* Primary Accents */
   --accent: #FF6B35;

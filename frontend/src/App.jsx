@@ -5,6 +5,7 @@ import AppLayout from "./components/layout/AppLayout";
 import LoginPage from "./components/pages/LoginPage";
 import RegisterPage from "./components/pages/RegisterPage";
 import Dashboard from "./components/pages/Dashboard";
+import DatabaseManager from "./components/pages/DatabaseManager";
 import QueryPage from "./components/pages/QueryPage";
 import ProfilesPage from "./components/pages/ProfilesPage";
 import TokensPage from "./components/pages/TokensPage";
@@ -66,6 +67,7 @@ function AppRoutes() {
         <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="query" element={<QueryPage />} />
+        <Route path="database-manager" element={<DatabaseManager />} />
         <Route path="profiles" element={<ProfilesPage />} />
         <Route path="tokens" element={<TokensPage />} />
         <Route path="audit" element={<AuditPage />} />

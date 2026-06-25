@@ -75,6 +75,7 @@ class ProfileOut(BaseModel):
     port: int
     database_name: str
     username: str
+    password: str
     ssl_enabled: bool
     read_only: bool
     allowed_schemas: List[str]
@@ -166,6 +167,7 @@ class DashboardStats(BaseModel):
     avg_response_time_ms: float
     success_rate: float
     most_queried_db: Optional[str]
+    db_engine_mix: Optional[List[dict]] = None
     recent_queries: List[QueryLogOut]
 
 
@@ -176,3 +178,11 @@ class SchemaIngestResponse(BaseModel):
     tables_discovered: int
     columns_discovered: int
     message: str
+
+class ColumnSchema(BaseModel):
+    name: str
+    data_type: str
+
+class TableSchema(BaseModel):
+    name: str
+    columns: List[ColumnSchema]

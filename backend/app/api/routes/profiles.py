@@ -8,7 +8,7 @@ from app.services.profile_service import (
     create_profile, get_profile, list_profiles,
     update_profile, delete_profile, test_connection,
 )
-from app.services.schema_service import ingest_schema
+from app.services.schema_service import ingest_schema, get_profile_schema_structure
 from app.core.security import get_current_user
 
 router = APIRouter()
@@ -78,3 +78,12 @@ async def ingest(
     current_user=Depends(get_current_user),
 ):
     return await ingest_schema(db, profile_id, current_user)
+
+
+@router.get("/{profile_id}/schema")
+async def get_schema(
+    profile_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    return await get_profile_schema_structure(db, profile_id, current_user)

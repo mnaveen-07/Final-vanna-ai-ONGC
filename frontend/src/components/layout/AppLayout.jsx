@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import { useAuth } from "../../hooks/useAuth";
-import { LogOut, User, Search, Bell, Command, Database, Terminal, Shield, Key, Settings } from "lucide-react";
+import { LogOut, User, Search, Bell, Command, Database, Terminal, Shield, Key, Settings, TableProperties } from "lucide-react";
 import toast from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -30,6 +30,7 @@ function CommandPalette({ isOpen, onClose }) {
           {[
             { icon: Terminal, label: "AI Query Engine", path: "/query" },
             { icon: Database, label: "Manage Infrastructure", path: "/profiles" },
+            { icon: TableProperties, label: "Explore Schemas", path: "/database-manager" },
             { icon: Key, label: "Generate API Token", path: "/tokens" },
             { icon: Shield, label: "Security Activity", path: "/audit" },
             { icon: Settings, label: "Platform Settings", path: "/settings" }
@@ -117,13 +118,7 @@ export default function AppLayout() {
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
-            {/* Notifications */}
-            <button className="hover-glow" style={{ background: "transparent", border: "none", cursor: "pointer", position: "relative" }}>
-              <Bell size={20} color="var(--text-secondary)" />
-              <div style={{ position: "absolute", top: -2, right: -2, width: 8, height: 8, background: "var(--accent)", borderRadius: "50%", border: "2px solid var(--bg-base)" }} />
-            </button>
 
-            <div style={{ width: 1, height: 24, background: "var(--bg-border)" }} />
 
             {/* Profile Dropdown Area */}
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>

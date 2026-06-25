@@ -1,7 +1,7 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Database, Key, MessageSquare,
-  ScrollText, Settings, Brain, ChevronRight,
+  ScrollText, Settings, Brain, ChevronRight, TableProperties
 } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -9,6 +9,7 @@ const NAV = [
   { to: "/dashboard",  label: "Overview",    icon: LayoutDashboard },
   { to: "/query",      label: "AI Command",  icon: MessageSquare },
   { to: "/profiles",   label: "Databases",   icon: Database },
+  { to: "/database-manager", label: "DB Manager", icon: TableProperties },
   { to: "/tokens",     label: "API Tokens",  icon: Key },
   { to: "/audit",      label: "Audit Logs",  icon: ScrollText },
   { to: "/settings",   label: "Settings",    icon: Settings },

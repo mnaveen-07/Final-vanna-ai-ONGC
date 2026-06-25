@@ -66,6 +66,14 @@ class ConnectionProfile(Base):
     owner = relationship("User", back_populates="profiles")
     api_tokens = relationship("APIToken", back_populates="profile")
 
+    @property
+    def password(self) -> str:
+        from app.services.crypto_service import decrypt_password
+        try:
+            return decrypt_password(self.encrypted_password)
+        except Exception:
+            return ""
+
 
 class APIToken(Base):
     __tablename__ = "api_tokens"
@@ -106,6 +114,7 @@ class QueryLog(Base):
 
     api_token = relationship("APIToken", back_populates="query_logs")
     user = relationship("User")
+    profile = relationship("ConnectionProfile")
 
 
 class SchemaMetadata(Base):

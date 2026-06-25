@@ -272,3 +272,5 @@ export function CodeBlock({ code, language = "sql" }) {
     </div>
   );
 }
+
+export * from "./ChatBot";

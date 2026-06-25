@@ -18,6 +18,25 @@ async def dashboard(db: AsyncSession = Depends(get_db), _=Depends(get_current_us
     success = (await db.execute(select(func.count(QueryLog.id)).where(QueryLog.execution_status == "success"))).scalar()
     rate = round((success / total_queries * 100), 1) if total_queries else 100.0
     recent = (await db.execute(select(QueryLog).order_by(desc(QueryLog.created_at)).limit(5))).scalars().all()
+    db_mix_rows = (await db.execute(select(ConnectionProfile.db_type, func.count(ConnectionProfile.id)).group_by(ConnectionProfile.db_type))).all()
+    
+    # Assign beautiful colors to different DB types for the pie chart
+    colors = {
+        "postgresql": "#3B82F6",
+        "mysql": "#F59E0B",
+        "oracle": "#EF4444",
+        "mongodb": "#10B981",
+        "mssql": "#8B5CF6"
+    }
+    
+    db_engine_mix = [
+        {
+            "name": (row[0].value if hasattr(row[0], 'value') else str(row[0])).capitalize(),
+            "value": row[1],
+            "color": colors.get((row[0].value if hasattr(row[0], 'value') else str(row[0])).lower(), "#8884d8")
+        } for row in db_mix_rows
+    ]
+
     return {
         "total_users": total_users,
         "active_profiles": active_profiles,
@@ -26,5 +45,6 @@ async def dashboard(db: AsyncSession = Depends(get_db), _=Depends(get_current_us
         "avg_response_time_ms": round(avg_time, 1),
         "success_rate": rate,
         "most_queried_db": "PostgreSQL",
+        "db_engine_mix": db_engine_mix,
         "recent_queries": recent,
     }

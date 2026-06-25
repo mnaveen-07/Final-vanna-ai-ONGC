@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Plug, Trash2, RefreshCw, Database, CheckCircle, XCircle, Clock, Server, Activity, Shield } from "lucide-react";
+import { Plus, Plug, Trash2, RefreshCw, Database, CheckCircle, XCircle, Clock, Server, Activity, Shield, Copy } from "lucide-react";
 import {
   Card, Button, Input, Select, Badge, PageHeader, EmptyState,
 } from "../ui";
@@ -172,17 +172,36 @@ function ProfileCard({ profile, onDelete, onRefresh }) {
           </div>
         </div>
 
-        {/* Telemetry Mockup */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, background: "rgba(0,0,0,0.2)", padding: 16, borderRadius: 12, marginBottom: 24 }}>
-          <div>
-            <div style={{ fontSize: 11, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>Latency</div>
-            <div style={{ fontSize: 18, fontWeight: 700, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 6 }}>
-              <Activity size={16} color="var(--success)" /> {latency}ms
+        {/* Telemetry Mockup & Connection Details */}
+        <div style={{ background: "rgba(0,0,0,0.2)", padding: 16, borderRadius: 12, marginBottom: 24 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12, fontSize: 13, marginBottom: 16, paddingBottom: 16, borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ display: "flex", gap: 8 }}><span style={{ color: "var(--text-muted)", width: 80 }}>Database:</span><span style={{ color: "var(--text-primary)", fontWeight: 500 }}>{profile.database_name || "N/A"}</span></div>
+              {profile.database_name && <Button variant="ghost" size="sm" style={{ padding: 4, height: "auto" }} onClick={() => { navigator.clipboard.writeText(profile.database_name); toast.success("Database name copied"); }}><Copy size={14} /></Button>}
+            </div>
+            
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ display: "flex", gap: 8 }}><span style={{ color: "var(--text-muted)", width: 80 }}>Username:</span><span style={{ color: "var(--text-primary)", fontWeight: 500 }}>{profile.username || "N/A"}</span></div>
+              {profile.username && <Button variant="ghost" size="sm" style={{ padding: 4, height: "auto" }} onClick={() => { navigator.clipboard.writeText(profile.username); toast.success("Username copied"); }}><Copy size={14} /></Button>}
+            </div>
+            
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ display: "flex", gap: 8 }}><span style={{ color: "var(--text-muted)", width: 80 }}>Password:</span><span style={{ color: "var(--text-primary)", fontFamily: "monospace", letterSpacing: 2 }}>••••••••</span></div>
+              {profile.password && <Button variant="ghost" size="sm" style={{ padding: 4, height: "auto" }} onClick={() => { navigator.clipboard.writeText(profile.password); toast.success("Password copied"); }}><Copy size={14} /></Button>}
             </div>
           </div>
-          <div>
-            <div style={{ fontSize: 11, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>Schemas Tracked</div>
-            <div style={{ fontSize: 18, fontWeight: 700, color: "var(--text-primary)" }}>{schemaCount}</div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+            <div>
+              <div style={{ fontSize: 11, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>Latency</div>
+              <div style={{ fontSize: 18, fontWeight: 700, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 6 }}>
+                <Activity size={16} color="var(--success)" /> {latency}ms
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: 11, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>Schemas Tracked</div>
+              <div style={{ fontSize: 18, fontWeight: 700, color: "var(--text-primary)" }}>{schemaCount}</div>
+            </div>
           </div>
         </div>
 

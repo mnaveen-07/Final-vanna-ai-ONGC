@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const BASE_URL = "";
+const BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:8000";
 
 const api = axios.create({
   baseURL: BASE_URL,
@@ -45,6 +45,7 @@ export const updateProfile = (id, data) => api.put(`/api/profiles/${id}`, data).
 export const deleteProfile = (id) => api.delete(`/api/profiles/${id}`);
 export const testConnection = (id) => api.post(`/api/profiles/${id}/test`).then((r) => r.data);
 export const ingestSchema = (id) => api.post(`/api/profiles/${id}/ingest-schema`).then((r) => r.data);
+export const getProfileSchema = (id) => api.get(`/api/profiles/${id}/schema`).then((r) => r.data);
 
 // ─── Tokens ───────────────────────────────────────────────────────────────────
 export const listTokens = () => api.get("/api/tokens").then((r) => r.data);
